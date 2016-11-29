@@ -880,15 +880,15 @@ func (fbo *folderBranchOps) identifyOnce(
 func (fbo *folderBranchOps) getMDLocked(
 	ctx context.Context, lState *lockState, rtype mdReqType) (
 	md ImmutableRootMetadata, err error) {
-	defer func() {
-		if err != nil || rtype == mdReadNoIdentify || rtype == mdRekey {
-			return
-		}
-		err = fbo.identifyOnce(ctx, md.ReadOnly())
-	}()
 
 	md = fbo.getHead(lState)
 	if md != (ImmutableRootMetadata{}) {
+		if rtype != mdReadNoIdentify && rtype != mdRekey {
+			err = fbo.identifyOnce(ctx, md.ReadOnly())
+			if err != nil {
+				return ImmutableRootMetadata{}, err
+			}
+		}
 		return md, nil
 	}
 
@@ -947,6 +947,10 @@ func (fbo *folderBranchOps) getMDLocked(
 	fbo.headLock.Lock(lState)
 	defer fbo.headLock.Unlock(lState)
 	err = fbo.setInitialHeadUntrustedLocked(ctx, lState, md)
+	if err != nil {
+		return ImmutableRootMetadata{}, err
+	}
+	err = fbo.identifyOnce(ctx, md.ReadOnly())
 	if err != nil {
 		return ImmutableRootMetadata{}, err
 	}
