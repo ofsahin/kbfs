@@ -86,13 +86,15 @@ func testFileDataLevelFromData(maxBlockSize int64, maxPtrsPerBlock int,
 	for len(prevChildren) != 1 {
 		prevChildIndex := 0
 		var level []testFileDataLevel
+		var off int64
+		size := 0
+		nextHole := 0
 		for i := 0; i < numAtLevel; i++ {
 			// Split the previous children up (if any) into
 			// maxPtrsPerBlock chunks.
 			var children []testFileDataLevel
-			off := int64(0)
 			dirty := false
-			size := 0
+			var nextOff int64
 			if len(prevChildren) > 0 {
 				newIndex := prevChildIndex + maxPtrsPerBlock
 				if newIndex > len(prevChildren) {
@@ -108,14 +110,22 @@ func testFileDataLevelFromData(maxBlockSize int64, maxPtrsPerBlock int,
 					}
 				}
 			} else {
-				off = int64(i) * maxBlockSize
 				dirty = off < endWrite && startWrite < off+maxBlockSize
 				size = int(maxBlockSize)
 				if off+maxBlockSize > fullDataLen {
 					size = int(fullDataLen - off)
+					nextOff = fullDataLen
+				} else if nextHole < len(holes) &&
+					off+maxBlockSize > holes[nextHole].start {
+					size = int(holes[nextHole].start - off)
+					nextOff = holes[nextHole].end
+					nextHole++
+				} else {
+					nextOff = off + maxBlockSize
 				}
 			}
 			newChild := testFileDataLevel{dirty, children, off, size}
+			off = nextOff
 			level = append(level, newChild)
 		}
 		prevChildren = level
@@ -218,7 +228,7 @@ func testFileDataWriteExtendEmptyFile(t *testing.T, maxBlockSize int64,
 		data[i] = byte(i)
 	}
 	expectedTopLevel := testFileDataLevelFromData(
-		maxBlockSize, maxPtrsPerBlock, 0, fullDataLen, 0, fullDataLen)
+		maxBlockSize, maxPtrsPerBlock, 0, fullDataLen, nil, 0, fullDataLen)
 
 	testFileDataCheckWrite(
 		t, fd, dirtyBcache, df, data, 0, topBlock, de, uint64(fullDataLen),
@@ -264,15 +274,18 @@ func TestFileDataWriteNewTenLevels(t *testing.T) {
 
 func testFileDataLevelExistingBlocks(t *testing.T, fd *fileData,
 	maxBlockSize int64, maxPtrsPerBlock int, existingData []byte,
-	cleanBcache BlockCache) (*FileBlock, int) {
+	holes []testFileDataHole, cleanBcache BlockCache) (*FileBlock, int) {
 	numAtLevel := int(
 		math.Ceil(float64(len(existingData)) / float64(maxBlockSize)))
 	var prevChildren []*FileBlock
 	numLevels := 0
 	crypto := MakeCryptoCommon(kbfscodec.NewMsgpack())
+	nextHole := 0
 	for len(prevChildren) != 1 {
 		prevChildIndex := 0
 		var level []*FileBlock
+		var off int64
+		existingDataLen := int64(len(existingData))
 		for i := 0; i < numAtLevel; i++ {
 			// Split the previous children up (if any) into maxNumPtr
 			// chunks.
@@ -309,12 +322,22 @@ func testFileDataLevelExistingBlocks(t *testing.T, fd *fileData,
 					cleanBcache.Put(ptr, fd.file.Tlf, child, TransientEntry)
 				}
 			} else {
-				off := int64(i) * maxBlockSize
 				endOff := off + maxBlockSize
-				if endOff > int64(len(existingData)) {
-					endOff = int64(len(existingData))
+				var nextOff int64
+				if nextHole < len(holes) &&
+					endOff > holes[nextHole].start {
+					endOff = holes[nextHole].start
+					nextOff = holes[nextHole].end
+					nextHole++
+				} else if endOff > existingDataLen {
+					endOff = existingDataLen
+					nextOff = existingDataLen
+				} else {
+					nextOff = endOff
 				}
+
 				fblock.Contents = existingData[off:endOff]
+				off = nextOff
 			}
 			level = append(level, fblock)
 		}
@@ -335,14 +358,15 @@ func testFileDataWriteExtendExistingFile(t *testing.T, maxBlockSize int64,
 		data[i] = byte(i)
 	}
 	topBlock, levels := testFileDataLevelExistingBlocks(
-		t, fd, maxBlockSize, maxPtrsPerBlock, data[:existingLen], cleanBcache)
+		t, fd, maxBlockSize, maxPtrsPerBlock, data[:existingLen], nil,
+		cleanBcache)
 	de := DirEntry{
 		EntryInfo: EntryInfo{
 			Size: uint64(existingLen),
 		},
 	}
 	expectedTopLevel := testFileDataLevelFromData(
-		maxBlockSize, maxPtrsPerBlock, levels, fullDataLen, existingLen,
+		maxBlockSize, maxPtrsPerBlock, levels, fullDataLen, nil, existingLen,
 		fullDataLen)
 
 	extendedBytes := fullDataLen - existingLen
