@@ -72,8 +72,13 @@ type testFileDataLevel struct {
 	size     int
 }
 
+type testFileDataHole struct {
+	start int64
+	end   int64
+}
+
 func testFileDataLevelFromData(maxBlockSize int64, maxPtrsPerBlock int,
-	existingLevels int, fullDataLen int64,
+	existingLevels int, fullDataLen int64, holes []testFileDataHole,
 	startWrite, endWrite int64) testFileDataLevel {
 	numAtLevel := int(math.Ceil(float64(fullDataLen) / float64(maxBlockSize)))
 	var prevChildren []testFileDataLevel
@@ -82,8 +87,8 @@ func testFileDataLevelFromData(maxBlockSize int64, maxPtrsPerBlock int,
 		prevChildIndex := 0
 		var level []testFileDataLevel
 		for i := 0; i < numAtLevel; i++ {
-			// Split the previous children up (if any) into maxNumPtr
-			// chunks.
+			// Split the previous children up (if any) into
+			// maxPtrsPerBlock chunks.
 			var children []testFileDataLevel
 			off := int64(0)
 			dirty := false

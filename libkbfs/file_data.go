@@ -617,12 +617,127 @@ func (fd *fileData) shiftBlocksToFillHole(
 	// `newHoleStartOff`.  Keep swapping it with its sibling on the
 	// left until its offset would be lower than that child's offset.
 	// If there are no children to the left, continue on with the
-	// children in the leftmost cousin block.  If we swap a child
+	// children in the cousin block to the left.  If we swap a child
 	// between cousin blocks, we must update the offset in the right
 	// cousin's parent block.  If *that* updated pointer is the
 	// leftmost pointer in its parent block, update that one as well,
 	// up to the root.
-	return nil, nil
+	var parents []parentBlockAndChildIndex
+	currBlock := newTopBlock
+	for currBlock.IsInd {
+		index := len(currBlock.IPtrs) - 1
+		nextPtr := currBlock.IPtrs[index].BlockPointer
+		parents = append(parents, parentBlockAndChildIndex{currBlock, index})
+		currBlock, _, err = fd.getter(ctx, fd.kmd, nextPtr, fd.file, blockWrite)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	immedParent := parents[len(parents)-1]
+	currIndex := immedParent.childIndex
+	if off := immedParent.pblock.IPtrs[currIndex].Off; off != newHoleStartOff {
+		return nil, fmt.Errorf("Offset of rightmost block %d doesn't "+
+			"match newHoleStartOff %d", off, newHoleStartOff)
+	}
+
+	// Swap left as needed.
+	for true {
+		var leftOff int64
+		var newParents []parentBlockAndChildIndex
+		if currIndex != 0 {
+			leftOff = immedParent.pblock.IPtrs[currIndex-1].Off
+		} else {
+			// Look for the next left cousin.
+			newParents = make([]parentBlockAndChildIndex, len(parents))
+			copy(newParents, parents)
+			var level int
+			for level = len(newParents) - 2; level >= 0; level-- {
+				if newParents[level].childIndex > 0 {
+					// Keep going up until we find a way back down.
+					break
+				}
+			}
+
+			if level < 0 {
+				// We are already all the way on the left, we're done!
+				return newDirtyPtrs, nil
+			}
+			newParents[level].childIndex--
+
+			// Walk back down, shifting the new parents into position.
+			for ; level < len(newParents)-1; level++ {
+				nextChildPtr :=
+					newParents[level].pblock.IPtrs[newParents[level].childIndex]
+				childBlock, _, err := fd.getter(
+					ctx, fd.kmd, nextChildPtr.BlockPointer, fd.file, blockWrite)
+				if err != nil {
+					return nil, err
+				}
+
+				newParents[level-1].pblock = childBlock
+				newParents[level-1].childIndex = len(childBlock.IPtrs) - 1
+				leftOff = childBlock.IPtrs[len(childBlock.IPtrs)-1].Off
+			}
+		}
+
+		// We're done!
+		if leftOff < newHoleStartOff {
+			return newDirtyPtrs, nil
+		}
+
+		// Otherwise, we need to swap the indirect file pointers.
+		if currIndex != 0 {
+			immedParent.pblock.IPtrs[currIndex-1],
+				immedParent.pblock.IPtrs[currIndex] =
+				immedParent.pblock.IPtrs[currIndex],
+				immedParent.pblock.IPtrs[currIndex-1]
+			currIndex--
+		} else {
+			newImmedParent := newParents[len(newParents)-1]
+			newCurrIndex := len(newImmedParent.pblock.IPtrs) - 1
+			newImmedParent.pblock.IPtrs[newCurrIndex],
+				immedParent.pblock.IPtrs[currIndex] =
+				immedParent.pblock.IPtrs[currIndex],
+				newImmedParent.pblock.IPtrs[newCurrIndex]
+
+			if len(newParents) > 1 {
+				i := len(newParents) - 2
+				iptr := newParents[i].pblock.IPtrs[parents[i].childIndex]
+				if err := fd.cacher(
+					iptr.BlockPointer, newImmedParent.pblock); err != nil {
+					return nil, err
+				}
+			}
+
+			// Now we need to update the parent offsets on the right
+			// side, all the way up to the common ancestor (which is
+			// the one with the one that doesn't have a childIndex of 0).
+			newRightOff := immedParent.pblock.IPtrs[currIndex].Off
+			for level := len(parents) - 2; level >= 0; level-- {
+				// Cache the block below you, which was just modified.
+				childPtr :=
+					parents[level].pblock.IPtrs[parents[level].childIndex]
+				if err := fd.cacher(childPtr.BlockPointer,
+					parents[level+1].pblock); err != nil {
+					return nil, err
+				}
+				newDirtyPtrs = append(newDirtyPtrs, childPtr.BlockPointer)
+
+				// Update this level if needed.
+				if parents[level].childIndex > 0 {
+					break
+				}
+				parents[level].pblock.IPtrs[0].Off = newRightOff
+			}
+			immedParent = newImmedParent
+			currIndex = newCurrIndex
+			parents = newParents
+		}
+	}
+
+	return nil, fmt.Errorf("Couldn't find where to move the hole for offset %d",
+		newHoleStartOff)
 }
 
 // write sets the given data and the given offset within the file,
