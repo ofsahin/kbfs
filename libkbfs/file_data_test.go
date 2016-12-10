@@ -80,57 +80,62 @@ type testFileDataHole struct {
 func testFileDataLevelFromData(maxBlockSize int64, maxPtrsPerBlock int,
 	existingLevels int, fullDataLen int64, holes []testFileDataHole,
 	startWrite, endWrite int64) testFileDataLevel {
-	numAtLevel := int(math.Ceil(float64(fullDataLen) / float64(maxBlockSize)))
+	// First fill in the leaf level.
 	var prevChildren []testFileDataLevel
-	newLevels := 0
+	var off int64
+	size := 0
+	nextHole := 0
+	for off < fullDataLen {
+		var nextOff int64
+		size = int(maxBlockSize)
+		if nextHole < len(holes) &&
+			off+maxBlockSize > holes[nextHole].start {
+			size = int(holes[nextHole].start - off)
+			nextOff = holes[nextHole].end
+			nextHole++
+		} else if off+maxBlockSize > fullDataLen {
+			size = int(fullDataLen - off)
+			nextOff = fullDataLen
+		} else {
+			nextOff = off + maxBlockSize
+		}
+		dirty := off < endWrite && startWrite < off+int64(size)
+		newChild := testFileDataLevel{dirty, nil, off, size}
+		prevChildren = append(prevChildren, newChild)
+		off = nextOff
+	}
+
+	// Now fill in any parents.
+	newLevels := 1
 	for len(prevChildren) != 1 {
 		prevChildIndex := 0
 		var level []testFileDataLevel
-		var off int64
-		size := 0
-		nextHole := 0
+
+		numAtLevel := int(math.Ceil(float64(len(prevChildren)) /
+			float64(maxPtrsPerBlock)))
 		for i := 0; i < numAtLevel; i++ {
 			// Split the previous children up (if any) into
 			// maxPtrsPerBlock chunks.
 			var children []testFileDataLevel
 			dirty := false
-			var nextOff int64
-			if len(prevChildren) > 0 {
-				newIndex := prevChildIndex + maxPtrsPerBlock
-				if newIndex > len(prevChildren) {
-					newIndex = len(prevChildren)
-				}
-				off = prevChildren[prevChildIndex].off
-				children = prevChildren[prevChildIndex:newIndex]
-				prevChildIndex = newIndex
-				for _, child := range children {
-					if child.dirty {
-						dirty = true
-						break
-					}
-				}
-			} else {
-				dirty = off < endWrite && startWrite < off+maxBlockSize
-				size = int(maxBlockSize)
-				if off+maxBlockSize > fullDataLen {
-					size = int(fullDataLen - off)
-					nextOff = fullDataLen
-				} else if nextHole < len(holes) &&
-					off+maxBlockSize > holes[nextHole].start {
-					size = int(holes[nextHole].start - off)
-					nextOff = holes[nextHole].end
-					nextHole++
-				} else {
-					nextOff = off + maxBlockSize
+			var off int64
+			newIndex := prevChildIndex + maxPtrsPerBlock
+			if newIndex > len(prevChildren) {
+				newIndex = len(prevChildren)
+			}
+			off = prevChildren[prevChildIndex].off
+			children = prevChildren[prevChildIndex:newIndex]
+			prevChildIndex = newIndex
+			for _, child := range children {
+				if child.dirty {
+					dirty = true
+					break
 				}
 			}
-			newChild := testFileDataLevel{dirty, children, off, size}
-			off = nextOff
+			newChild := testFileDataLevel{dirty, children, off, 0}
 			level = append(level, newChild)
 		}
 		prevChildren = level
-		numAtLevel =
-			int(math.Ceil(float64(len(level)) / float64(maxPtrsPerBlock)))
 		newLevels++
 	}
 
@@ -275,75 +280,77 @@ func TestFileDataWriteNewTenLevels(t *testing.T) {
 func testFileDataLevelExistingBlocks(t *testing.T, fd *fileData,
 	maxBlockSize int64, maxPtrsPerBlock int, existingData []byte,
 	holes []testFileDataHole, cleanBcache BlockCache) (*FileBlock, int) {
-	numAtLevel := int(
-		math.Ceil(float64(len(existingData)) / float64(maxBlockSize)))
+	// First fill in the leaf blocks.
+	var off int64
+	existingDataLen := int64(len(existingData))
 	var prevChildren []*FileBlock
-	numLevels := 0
-	crypto := MakeCryptoCommon(kbfscodec.NewMsgpack())
+	var leafOffs []int64
 	nextHole := 0
+	for off < existingDataLen {
+		endOff := off + maxBlockSize
+		var nextOff int64
+		if nextHole < len(holes) &&
+			endOff > holes[nextHole].start {
+			endOff = holes[nextHole].start
+			nextOff = holes[nextHole].end
+			nextHole++
+		} else if endOff > existingDataLen {
+			endOff = existingDataLen
+			nextOff = existingDataLen
+		} else {
+			nextOff = endOff
+		}
+
+		fblock := NewFileBlock().(*FileBlock)
+		fblock.Contents = existingData[off:endOff]
+		prevChildren = append(prevChildren, fblock)
+		leafOffs = append(leafOffs, off)
+		off = nextOff
+	}
+
+	numLevels := 1
+	crypto := MakeCryptoCommon(kbfscodec.NewMsgpack())
 	for len(prevChildren) != 1 {
 		prevChildIndex := 0
 		var level []*FileBlock
-		var off int64
-		existingDataLen := int64(len(existingData))
+		numAtLevel := int(math.Ceil(float64(len(prevChildren)) /
+			float64(maxPtrsPerBlock)))
 		for i := 0; i < numAtLevel; i++ {
-			// Split the previous children up (if any) into maxNumPtr
+			// Split the previous children up (if any) into maxPtrsPerBlock
 			// chunks.
 			var children []*FileBlock
-			fblock := NewFileBlock().(*FileBlock)
-			if len(prevChildren) > 0 {
-				newIndex := prevChildIndex + maxPtrsPerBlock
-				if newIndex > len(prevChildren) {
-					newIndex = len(prevChildren)
-				}
-				children = prevChildren[prevChildIndex:newIndex]
-				prevChildIndex = newIndex
-				fblock.IsInd = true
-				for j, child := range children {
-					id, err := crypto.MakeTemporaryBlockID()
-					require.NoError(t, err)
-					ptr := BlockPointer{
-						ID:      id,
-						KeyGen:  1,
-						DataVer: 1,
-					}
-					var off int64
-					if child.IsInd {
-						off = child.IPtrs[0].Off
-					} else {
-						off = int64(i)*maxBlockSize*int64(maxPtrsPerBlock) +
-							int64(j)*maxBlockSize
-					}
-
-					fblock.IPtrs = append(fblock.IPtrs, IndirectFilePtr{
-						BlockInfo: BlockInfo{ptr, 0},
-						Off:       off,
-					})
-					cleanBcache.Put(ptr, fd.file.Tlf, child, TransientEntry)
-				}
-			} else {
-				endOff := off + maxBlockSize
-				var nextOff int64
-				if nextHole < len(holes) &&
-					endOff > holes[nextHole].start {
-					endOff = holes[nextHole].start
-					nextOff = holes[nextHole].end
-					nextHole++
-				} else if endOff > existingDataLen {
-					endOff = existingDataLen
-					nextOff = existingDataLen
-				} else {
-					nextOff = endOff
-				}
-
-				fblock.Contents = existingData[off:endOff]
-				off = nextOff
+			newIndex := prevChildIndex + maxPtrsPerBlock
+			if newIndex > len(prevChildren) {
+				newIndex = len(prevChildren)
 			}
+			children = prevChildren[prevChildIndex:newIndex]
+			fblock := NewFileBlock().(*FileBlock)
+			fblock.IsInd = true
+			for j, child := range children {
+				id, err := crypto.MakeTemporaryBlockID()
+				require.NoError(t, err)
+				ptr := BlockPointer{
+					ID:      id,
+					KeyGen:  1,
+					DataVer: 1,
+				}
+				var off int64
+				if child.IsInd {
+					off = child.IPtrs[0].Off
+				} else {
+					off = leafOffs[prevChildIndex+j]
+				}
+
+				fblock.IPtrs = append(fblock.IPtrs, IndirectFilePtr{
+					BlockInfo: BlockInfo{ptr, 0},
+					Off:       off,
+				})
+				cleanBcache.Put(ptr, fd.file.Tlf, child, TransientEntry)
+			}
+			prevChildIndex = newIndex
 			level = append(level, fblock)
 		}
 		prevChildren = level
-		numAtLevel =
-			int(math.Ceil(float64(len(level)) / float64(maxPtrsPerBlock)))
 		numLevels++
 	}
 	return prevChildren[0], numLevels
