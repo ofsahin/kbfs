@@ -308,6 +308,7 @@ func testFileDataLevelExistingBlocks(t *testing.T, fd *fileData,
 		off = nextOff
 	}
 
+	// Now fill in any parents.
 	numLevels := 1
 	crypto := MakeCryptoCommon(kbfscodec.NewMsgpack())
 	for len(prevChildren) != 1 {
