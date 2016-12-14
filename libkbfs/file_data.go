@@ -609,8 +609,7 @@ func (fd *fileData) newRightBlock(
 }
 
 func (fd *fileData) shiftBlocksToFillHole(
-	ctx context.Context, newTopBlock *FileBlock,
-	parentBlocks []parentBlockAndChildIndex, newHoleStartOff int64) (
+	ctx context.Context, newTopBlock *FileBlock, newHoleStartOff int64) (
 	newDirtyPtrs []BlockPointer, err error) {
 	// Walk down the right side of the tree to find the new rightmost
 	// indirect pointer, the offset of which should match
@@ -641,6 +640,8 @@ func (fd *fileData) shiftBlocksToFillHole(
 			"match newHoleStartOff %d", off, newHoleStartOff)
 	}
 
+	fd.log.CDebugf(ctx, "Pre-shift parents: %v", parents)
+
 	// Swap left as needed.
 	for true {
 		var leftOff int64
@@ -654,13 +655,14 @@ func (fd *fileData) shiftBlocksToFillHole(
 			var level int
 			for level = len(newParents) - 2; level >= 0; level-- {
 				if newParents[level].childIndex > 0 {
-					// Keep going up until we find a way back down.
 					break
 				}
+				// Keep going up until we find a way back down.
 			}
 
 			if level < 0 {
 				// We are already all the way on the left, we're done!
+				fd.log.CDebugf(ctx, "Post-shift parents: %v", parents)
 				return newDirtyPtrs, nil
 			}
 			newParents[level].childIndex--
@@ -675,19 +677,23 @@ func (fd *fileData) shiftBlocksToFillHole(
 					return nil, err
 				}
 
-				newParents[level-1].pblock = childBlock
-				newParents[level-1].childIndex = len(childBlock.IPtrs) - 1
+				newParents[level+1].pblock = childBlock
+				newParents[level+1].childIndex = len(childBlock.IPtrs) - 1
 				leftOff = childBlock.IPtrs[len(childBlock.IPtrs)-1].Off
 			}
 		}
 
 		// We're done!
 		if leftOff < newHoleStartOff {
+			fd.log.CDebugf(ctx, "Post-shift parents: %v", parents)
 			return newDirtyPtrs, nil
 		}
 
 		// Otherwise, we need to swap the indirect file pointers.
 		if currIndex != 0 {
+			fd.log.CDebugf(ctx, "Swapping offs %d with %d",
+				immedParent.pblock.IPtrs[currIndex-1].Off,
+				immedParent.pblock.IPtrs[currIndex].Off)
 			immedParent.pblock.IPtrs[currIndex-1],
 				immedParent.pblock.IPtrs[currIndex] =
 				immedParent.pblock.IPtrs[currIndex],
@@ -696,6 +702,9 @@ func (fd *fileData) shiftBlocksToFillHole(
 		} else {
 			newImmedParent := newParents[len(newParents)-1]
 			newCurrIndex := len(newImmedParent.pblock.IPtrs) - 1
+			fd.log.CDebugf(ctx, "Swapping offs %d with %d across cousins",
+				newImmedParent.pblock.IPtrs[newCurrIndex].Off,
+				immedParent.pblock.IPtrs[currIndex].Off)
 			newImmedParent.pblock.IPtrs[newCurrIndex],
 				immedParent.pblock.IPtrs[currIndex] =
 				immedParent.pblock.IPtrs[currIndex],
@@ -823,7 +832,7 @@ func (fd *fileData) write(ctx context.Context, data []byte, off int64,
 			// the hole and shift everything else over.
 			if needFillHole {
 				newDirtyPtrs, err := fd.shiftBlocksToFillHole(
-					ctx, newTopBlock, parentBlocks, nextOff)
+					ctx, newTopBlock, nextOff)
 				if err != nil {
 					return newDe, nil, unrefs, newlyDirtiedChildBytes, 0, err
 				}
