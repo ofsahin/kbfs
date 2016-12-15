@@ -77,7 +77,7 @@ type testFileDataHole struct {
 	end   int64
 }
 
-func testFileDataLevelFromData(maxBlockSize int64, maxPtrsPerBlock int,
+func testFileDataLevelFromData(t *testing.T, maxBlockSize int64, maxPtrsPerBlock int,
 	existingLevels int, fullDataLen int64, holes []testFileDataHole,
 	startWrite, endWrite int64) testFileDataLevel {
 	// First fill in the leaf level.
@@ -104,11 +104,13 @@ func testFileDataLevelFromData(maxBlockSize int64, maxPtrsPerBlock int,
 		}
 		dirty := off < endWrite && startWrite < off+int64(size)
 		newChild := testFileDataLevel{dirty, nil, off, size}
+		t.Logf("Expected leaf offset %d", off)
 		prevChildren = append(prevChildren, newChild)
 
 		if makeFinalHole {
 			dirty = endWrite == fullDataLen
 			newChild := testFileDataLevel{dirty, nil, nextOff, 0}
+			t.Logf("Expected leaf offset %d (final)", nextOff)
 			prevChildren = append(prevChildren, newChild)
 		}
 
@@ -243,7 +245,7 @@ func testFileDataWriteExtendEmptyFile(t *testing.T, maxBlockSize int64,
 		data[i] = byte(i)
 	}
 	expectedTopLevel := testFileDataLevelFromData(
-		maxBlockSize, maxPtrsPerBlock, 0, fullDataLen, nil, 0, fullDataLen)
+		t, maxBlockSize, maxPtrsPerBlock, 0, fullDataLen, nil, 0, fullDataLen)
 
 	testFileDataCheckWrite(
 		t, fd, dirtyBcache, df, data, 0, topBlock, de, uint64(fullDataLen),
@@ -317,11 +319,13 @@ func testFileDataLevelExistingBlocks(t *testing.T, fd *fileData,
 		fblock := NewFileBlock().(*FileBlock)
 		fblock.Contents = existingData[off:endOff]
 		prevChildren = append(prevChildren, fblock)
+		t.Logf("Initial leaf offset %d", off)
 		leafOffs = append(leafOffs, off)
 
 		if makeFinalHole {
 			fblock := NewFileBlock().(*FileBlock)
 			prevChildren = append(prevChildren, fblock)
+			t.Logf("Initial leaf offset %d (final)", nextOff)
 			leafOffs = append(leafOffs, nextOff)
 		}
 
@@ -394,7 +398,7 @@ func testFileDataWriteExtendExistingFile(t *testing.T, maxBlockSize int64,
 		},
 	}
 	expectedTopLevel := testFileDataLevelFromData(
-		maxBlockSize, maxPtrsPerBlock, levels, fullDataLen, nil, existingLen,
+		t, maxBlockSize, maxPtrsPerBlock, levels, fullDataLen, nil, existingLen,
 		fullDataLen)
 
 	extendedBytes := fullDataLen - existingLen
@@ -449,7 +453,7 @@ func TestFileDataExtendExistingTenLevels(t *testing.T) {
 
 func testFileDataOverwriteExistingFile(t *testing.T, maxBlockSize int64,
 	maxPtrsPerBlock int, fullDataLen int64, holes []testFileDataHole,
-	startWrite, endWrite int64) {
+	startWrite, endWrite int64, finalHoles []testFileDataHole) {
 	fd, cleanBcache, dirtyBcache, df := setupFileDataTest(
 		t, maxBlockSize, maxPtrsPerBlock)
 	data := make([]byte, fullDataLen)
@@ -468,9 +472,10 @@ func testFileDataOverwriteExistingFile(t *testing.T, maxBlockSize int64,
 			Size: uint64(fullDataLen),
 		},
 	}
+
 	expectedTopLevel := testFileDataLevelFromData(
-		maxBlockSize, maxPtrsPerBlock, levels, fullDataLen, holes, startWrite,
-		endWrite)
+		t, maxBlockSize, maxPtrsPerBlock, levels, fullDataLen, finalHoles,
+		startWrite, endWrite)
 
 	extendedBytes := int64(0)
 	// Round up to find out the number of dirty bytes.
@@ -502,5 +507,5 @@ func testFileDataOverwriteExistingFile(t *testing.T, maxBlockSize int64,
 
 func TestFileDataWriteStartOfHole(t *testing.T) {
 	testFileDataOverwriteExistingFile(t, 2, 2, 10, []testFileDataHole{{5, 10}},
-		5, 8)
+		5, 8, []testFileDataHole{{8, 10}})
 }

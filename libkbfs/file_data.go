@@ -734,10 +734,15 @@ func (fd *fileData) shiftBlocksToFillHole(
 				newDirtyPtrs = append(newDirtyPtrs, childPtr.BlockPointer)
 
 				// Update this level if needed.
-				if parents[level].childIndex > 0 {
+				if parents[level+1].childIndex > 0 {
+					fd.log.CDebugf(ctx, "Level %d parent childIndex is %d",
+						level+1, parents[level+1].childIndex)
 					break
 				}
-				parents[level].pblock.IPtrs[0].Off = newRightOff
+				index := parents[level].childIndex
+				parents[level].pblock.IPtrs[index].Off = newRightOff
+				fd.log.CDebugf(ctx, "Setting %d offset to %d at level %d",
+					index, newRightOff, level)
 			}
 			immedParent = newImmedParent
 			currIndex = newCurrIndex
@@ -773,6 +778,7 @@ func (fd *fileData) write(ctx context.Context, data []byte, off int64,
 	newDe = oldDe
 
 	for nCopied < n {
+		oldOff := off + nCopied
 		ptr, parentBlocks, block, nextBlockOff, startOff, wasDirty, err :=
 			fd.getFileBlockAtOffset(ctx, topBlock, off+nCopied, blockWrite)
 		if err != nil {
@@ -864,8 +870,10 @@ func (fd *fileData) write(ctx context.Context, data []byte, off int64,
 		// Calculate the amount of bytes we've newly-dirtied as part
 		// of this write.
 		newlyDirtiedChildBytes += int64(len(block.Contents))
+		fd.log.CDebugf(ctx, "Dirtied %d bytes at off %d", len(block.Contents), oldOff)
 		if wasDirty {
 			newlyDirtiedChildBytes -= int64(oldLen)
+			fd.log.CDebugf(ctx, "Adjusted dirty bytes at off %d by %d", oldOff, oldLen)
 		}
 
 		for _, pb := range parentBlocks {
