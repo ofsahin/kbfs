@@ -712,7 +712,8 @@ func (fd *fileData) shiftBlocksToFillHole(
 
 			if len(newParents) > 1 {
 				i := len(newParents) - 2
-				iptr := newParents[i].pblock.IPtrs[parents[i].childIndex]
+				iptr := newParents[i].pblock.IPtrs[newParents[i].childIndex]
+				fd.log.CDebugf(ctx, "Cached %v", iptr.BlockPointer)
 				if err := fd.cacher(
 					iptr.BlockPointer, newImmedParent.pblock); err != nil {
 					return nil, err
@@ -727,6 +728,7 @@ func (fd *fileData) shiftBlocksToFillHole(
 				// Cache the block below you, which was just modified.
 				childPtr :=
 					parents[level].pblock.IPtrs[parents[level].childIndex]
+				fd.log.CDebugf(ctx, "Cached %v", childPtr.BlockPointer)
 				if err := fd.cacher(childPtr.BlockPointer,
 					parents[level+1].pblock); err != nil {
 					return nil, err
@@ -776,6 +778,8 @@ func (fd *fileData) write(ctx context.Context, data []byte, off int64,
 	nCopied := int64(0)
 	oldSizeWithoutHoles := oldDe.Size
 	newDe = oldDe
+
+	fd.log.CDebugf(ctx, "Writing %d bytes at off %d", n, off)
 
 	for nCopied < n {
 		oldOff := off + nCopied

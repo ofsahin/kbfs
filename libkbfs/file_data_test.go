@@ -77,9 +77,10 @@ type testFileDataHole struct {
 	end   int64
 }
 
-func testFileDataLevelFromData(t *testing.T, maxBlockSize int64, maxPtrsPerBlock int,
-	existingLevels int, fullDataLen int64, holes []testFileDataHole,
-	startWrite, endWrite int64) testFileDataLevel {
+func testFileDataLevelFromData(t *testing.T, maxBlockSize int64,
+	maxPtrsPerBlock int, existingLevels int, fullDataLen int64,
+	holes []testFileDataHole, startWrite, endWrite,
+	holeShiftAfter int64) testFileDataLevel {
 	// First fill in the leaf level.
 	var prevChildren []testFileDataLevel
 	var off int64
@@ -90,7 +91,7 @@ func testFileDataLevelFromData(t *testing.T, maxBlockSize int64, maxPtrsPerBlock
 		size = int(maxBlockSize)
 		makeFinalHole := false
 		if nextHole < len(holes) &&
-			off+maxBlockSize > holes[nextHole].start {
+			off+maxBlockSize >= holes[nextHole].start {
 			size = int(holes[nextHole].start - off)
 			nextOff = holes[nextHole].end
 			nextHole++
@@ -129,7 +130,6 @@ func testFileDataLevelFromData(t *testing.T, maxBlockSize int64, maxPtrsPerBlock
 			// Split the previous children up (if any) into
 			// maxPtrsPerBlock chunks.
 			var children []testFileDataLevel
-			dirty := false
 			var off int64
 			newIndex := prevChildIndex + maxPtrsPerBlock
 			if newIndex > len(prevChildren) {
@@ -138,11 +138,18 @@ func testFileDataLevelFromData(t *testing.T, maxBlockSize int64, maxPtrsPerBlock
 			off = prevChildren[prevChildIndex].off
 			children = prevChildren[prevChildIndex:newIndex]
 			prevChildIndex = newIndex
+			dirty := false
 			for _, child := range children {
 				if child.dirty {
 					dirty = true
 					break
 				}
+			}
+			// Also if a new block was made in a hole, any indirect
+			// parent that comes after the end of the write will be
+			// dirty, due to hole shifting.
+			if holeShiftAfter > 0 && off >= holeShiftAfter {
+				dirty = true
 			}
 			newChild := testFileDataLevel{dirty, children, off, 0}
 			level = append(level, newChild)
@@ -170,6 +177,7 @@ func (tfdl testFileDataLevel) check(t *testing.T, fd *fileData,
 	dirtyPtrs map[BlockPointer]bool) {
 	dirtyPtrs = make(map[BlockPointer]bool)
 	levelString := fmt.Sprintf("ptr=%s, off=%d", ptr, off)
+	t.Logf("Checking %s", levelString)
 
 	require.Equal(t, tfdl.off, off, levelString)
 	if tfdl.dirty {
@@ -245,7 +253,8 @@ func testFileDataWriteExtendEmptyFile(t *testing.T, maxBlockSize int64,
 		data[i] = byte(i)
 	}
 	expectedTopLevel := testFileDataLevelFromData(
-		t, maxBlockSize, maxPtrsPerBlock, 0, fullDataLen, nil, 0, fullDataLen)
+		t, maxBlockSize, maxPtrsPerBlock, 0, fullDataLen, nil, 0,
+		fullDataLen, 0)
 
 	testFileDataCheckWrite(
 		t, fd, dirtyBcache, df, data, 0, topBlock, de, uint64(fullDataLen),
@@ -399,7 +408,7 @@ func testFileDataWriteExtendExistingFile(t *testing.T, maxBlockSize int64,
 	}
 	expectedTopLevel := testFileDataLevelFromData(
 		t, maxBlockSize, maxPtrsPerBlock, levels, fullDataLen, nil, existingLen,
-		fullDataLen)
+		fullDataLen, 0)
 
 	extendedBytes := fullDataLen - existingLen
 	// Round up to find out the number of dirty bytes.
@@ -460,9 +469,15 @@ func testFileDataOverwriteExistingFile(t *testing.T, maxBlockSize int64,
 	for i := 0; i < int(fullDataLen); i++ {
 		data[i] = byte(i)
 	}
+	holeShiftAfter := int64(0)
 	for _, hole := range holes {
 		for i := hole.start; i < hole.end; i++ {
 			data[i] = byte(0)
+			if holeShiftAfter == 0 {
+				if startWrite <= i && i < endWrite {
+					holeShiftAfter = i
+				}
+			}
 		}
 	}
 	topBlock, levels := testFileDataLevelExistingBlocks(
@@ -473,18 +488,32 @@ func testFileDataOverwriteExistingFile(t *testing.T, maxBlockSize int64,
 		},
 	}
 
+	t.Logf("holeShiftAfter=%d", holeShiftAfter)
 	expectedTopLevel := testFileDataLevelFromData(
 		t, maxBlockSize, maxPtrsPerBlock, levels, fullDataLen, finalHoles,
-		startWrite, endWrite)
+		startWrite, endWrite, holeShiftAfter)
 
-	extendedBytes := int64(0)
 	// Round up to find out the number of dirty bytes.
-	writtenBytes := endWrite - startWrite + 1
+	writtenBytes := endWrite - startWrite
 	remainder := writtenBytes % maxBlockSize
 	dirtiedBytes := writtenBytes
 	if remainder > 0 {
-		writtenBytes += (maxBlockSize - remainder)
+		dirtiedBytes += (maxBlockSize - remainder)
 	}
+
+	// The extended bytes are the size of the new blocks that were
+	// added.  This isn't exactly right, but for now just pick the
+	// start of the last hole and round it up to the next block.
+	extendedBytes := int64(0)
+	existingBytes := holes[len(holes)-1].start
+	remainder = existingBytes % maxBlockSize
+	if remainder > 0 {
+		existingBytes += (maxBlockSize - remainder)
+	}
+	if endWrite > existingBytes {
+		extendedBytes = endWrite - existingBytes
+	}
+
 	newData := make([]byte, writtenBytes)
 	for i := startWrite; i < endWrite; i++ {
 		// The new data shifts each byte over by 1.
