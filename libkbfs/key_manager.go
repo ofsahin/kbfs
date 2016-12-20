@@ -5,6 +5,7 @@
 package libkbfs
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/keybase/client/go/libkb"
@@ -638,7 +639,12 @@ func (km *KeyManagerStandard) Rekey(ctx context.Context, md *RootMetadata, promp
 
 	// If there's at least one new device, add that device to every key bundle.
 	if addNewReaderDevice || addNewWriterDevice {
-		for keyGen := FirstValidKeyGen; keyGen <= currKeyGen; keyGen++ {
+		start, end := md.KeyGenerationsToUpdate()
+		if start >= end {
+			return false, nil, errors.New(
+				"Unexpected empty range for key generations to update")
+		}
+		for keyGen := start; keyGen < end; keyGen++ {
 			flags := getTLFCryptKeyAnyDevice
 			if promptPaper {
 				flags |= getTLFCryptKeyPromptPaper
