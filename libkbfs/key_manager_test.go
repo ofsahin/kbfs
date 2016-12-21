@@ -679,7 +679,7 @@ func testKeyManagerPromoteReaderSuccessPrivate(t *testing.T, ver MetadataVer) {
 }
 
 func TestKeyManagerPromoteReaderFailurePrivate(t *testing.T) {
-	runTestOverMetadataVers(t, testKeyManagerPromoteReaderSuccessPrivate)
+	runTestOverMetadataVers(t, testKeyManagerPromoteReaderFailurePrivate)
 }
 
 func testKeyManagerPromoteReaderFailurePrivate(t *testing.T, ver MetadataVer) {
@@ -712,7 +712,7 @@ func testKeyManagerPromoteReaderFailurePrivate(t *testing.T, ver MetadataVer) {
 }
 
 func TestKeyManagerPromoteReaderFailure2Private(t *testing.T) {
-	runTestOverMetadataVers(t, testKeyManagerPromoteReaderSuccessPrivate)
+	runTestOverMetadataVers(t, testKeyManagerPromoteReaderFailure2Private)
 }
 
 func testKeyManagerPromoteReaderFailure2Private(t *testing.T, ver MetadataVer) {
