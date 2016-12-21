@@ -109,7 +109,7 @@ func udkimToV3(codec kbfscodec.Codec, udkim UserDeviceKeyInfoMap) (
 	return udkimV3, nil
 }
 
-func udkimV2ToV3(codec kbfscodec.Codec, udkimV2 UserDeviceKeyInfoMapV2) (
+func writerUDKIMV2ToV3(codec kbfscodec.Codec, udkimV2 UserDeviceKeyInfoMapV2) (
 	UserDeviceKeyInfoMapV3, error) {
 	// Check for an instance of KBFS-1719, specifically where a
 	// reader with a negative offset gets promoted to a writer.

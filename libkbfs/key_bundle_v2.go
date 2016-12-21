@@ -282,7 +282,7 @@ func (wkg TLFWriterKeyGenerationsV2) ToTLFWriterKeyBundleV3(
 
 	// Copy the latest UserDeviceKeyInfoMap.
 	wkbV2 := wkg[keyGen-FirstValidKeyGen]
-	udkimV3, err := udkimV2ToV3(codec, wkbV2.WKeys)
+	udkimV3, err := writerUDKIMV2ToV3(codec, wkbV2.WKeys)
 	if err != nil {
 		return TLFWriterKeyBundleV2{}, TLFWriterKeyBundleV3{}, err
 	}
