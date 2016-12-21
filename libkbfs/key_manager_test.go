@@ -711,6 +711,66 @@ func testKeyManagerPromoteReaderFailurePrivate(t *testing.T, ver MetadataVer) {
 	require.False(t, done)
 }
 
+func TestKeyManagerPromoteReaderFailure2Private(t *testing.T) {
+	runTestOverMetadataVers(t, testKeyManagerPromoteReaderSuccessPrivate)
+}
+
+func testKeyManagerPromoteReaderFailure2Private(t *testing.T, ver MetadataVer) {
+	config := MakeTestConfigOrBust(t, "alice", "bob", "charlie")
+	defer CheckConfigAndShutdown(t, config)
+
+	ctx := context.Background()
+
+	id := tlf.FakeID(1, false)
+	h, err := ParseTlfHandle(ctx, config.KBPKI(),
+		"bob,charlie@twitter#alice,charlie", false)
+	require.NoError(t, err)
+
+	rmd, err := makeInitialRootMetadata(config.MetadataVersion(), id, h)
+	require.NoError(t, err)
+
+	// Make the first key generation.
+	done, _, err := config.KeyManager().Rekey(ctx, rmd, false)
+	require.NoError(t, err)
+	require.True(t, done)
+
+	aliceUID := keybase1.MakeTestUID(1)
+	bobUID := keybase1.MakeTestUID(2)
+	charlieUID := keybase1.MakeTestUID(3)
+
+	isWriter, _, err := rmd.GetDevicePublicKeys(aliceUID)
+	require.NoError(t, err)
+	require.False(t, isWriter)
+	isWriter, _, err = rmd.GetDevicePublicKeys(bobUID)
+	require.NoError(t, err)
+	require.True(t, isWriter)
+	isWriter, _, err = rmd.GetDevicePublicKeys(charlieUID)
+	require.NoError(t, err)
+	require.False(t, isWriter)
+
+	// Pretend that charlie@twitter now resolves to charlie.
+	daemon := config.KeybaseService().(*KeybaseDaemonLocal)
+	daemon.addNewAssertionForTestOrBust("charlie", "charlie@twitter")
+
+	AddDeviceForLocalUserOrBust(t, config, aliceUID)
+
+	// Try to make the second key generation, which should success
+	// partially.
+	done, _, err = config.KeyManager().Rekey(ctx, rmd, false)
+	require.IsType(t, err, RekeyIncompleteError{})
+	require.True(t, done)
+
+	isWriter, _, err = rmd.GetDevicePublicKeys(aliceUID)
+	require.NoError(t, err)
+	require.False(t, isWriter)
+	isWriter, _, err = rmd.GetDevicePublicKeys(bobUID)
+	require.NoError(t, err)
+	require.True(t, isWriter)
+	isWriter, _, err = rmd.GetDevicePublicKeys(charlieUID)
+	require.NoError(t, err)
+	require.False(t, isWriter)
+}
+
 func TestKeyManagerReaderRekeyResolveAgainSuccessPrivate(t *testing.T) {
 	runTestOverMetadataVers(t, testKeyManagerReaderRekeyResolveAgainSuccessPrivate)
 }
