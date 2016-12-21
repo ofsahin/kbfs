@@ -618,11 +618,11 @@ func testKeyManagerRekeyResolveAgainSuccessPrivate(t *testing.T, ver MetadataVer
 	require.Equal(t, newH.ToBareHandleOrBust(), newBareH)
 }
 
-func TestKeyManagerPromoteReaderSuccessPrivate(t *testing.T) {
-	runTestOverMetadataVers(t, testKeyManagerPromoteReaderSuccessPrivate)
+func TestKeyManagerPromoteReaderSuccess(t *testing.T) {
+	runTestOverMetadataVers(t, testKeyManagerPromoteReaderSuccess)
 }
 
-func testKeyManagerPromoteReaderSuccessPrivate(t *testing.T, ver MetadataVer) {
+func testKeyManagerPromoteReaderSuccess(t *testing.T, ver MetadataVer) {
 	config := MakeTestConfigOrBust(t, "alice", "bob")
 	defer CheckConfigAndShutdown(t, config)
 
@@ -678,11 +678,11 @@ func testKeyManagerPromoteReaderSuccessPrivate(t *testing.T, ver MetadataVer) {
 		newH.GetCanonicalName())
 }
 
-func TestKeyManagerPromoteReaderFailurePrivate(t *testing.T) {
-	runTestOverMetadataVers(t, testKeyManagerPromoteReaderFailurePrivate)
+func TestKeyManagerPromoteReaderSelf(t *testing.T) {
+	runTestOverMetadataVers(t, testKeyManagerPromoteReaderSelf)
 }
 
-func testKeyManagerPromoteReaderFailurePrivate(t *testing.T, ver MetadataVer) {
+func testKeyManagerPromoteReaderSelf(t *testing.T, ver MetadataVer) {
 	config := MakeTestConfigOrBust(t, "alice", "bob")
 	defer CheckConfigAndShutdown(t, config)
 
@@ -690,7 +690,7 @@ func testKeyManagerPromoteReaderFailurePrivate(t *testing.T, ver MetadataVer) {
 
 	id := tlf.FakeID(1, false)
 	h, err := ParseTlfHandle(ctx, config.KBPKI(),
-		"alice@twitter,bob#alice", false)
+		"alice,bob@twitter#bob", false)
 	require.NoError(t, err)
 
 	rmd, err := makeInitialRootMetadata(config.MetadataVersion(), id, h)
@@ -701,14 +701,44 @@ func testKeyManagerPromoteReaderFailurePrivate(t *testing.T, ver MetadataVer) {
 	require.NoError(t, err)
 	require.True(t, done)
 
-	// Pretend that alice@twitter now resolves to alice.
-	daemon := config.KeybaseService().(*KeybaseDaemonLocal)
-	daemon.addNewAssertionForTestOrBust("alice", "alice@twitter")
+	aliceUID := keybase1.MakeTestUID(1)
+	bobUID := keybase1.MakeTestUID(2)
 
-	// Try to make the second key generation, which should fail.
-	done, _, err = config.KeyManager().Rekey(ctx, rmd, false)
-	require.IsType(t, err, RekeyIncompleteError{})
-	require.False(t, done)
+	isWriter, _, err := rmd.GetDevicePublicKeys(aliceUID)
+	require.NoError(t, err)
+	require.True(t, isWriter)
+	isWriter, _, err = rmd.GetDevicePublicKeys(bobUID)
+	require.NoError(t, err)
+	require.False(t, isWriter)
+
+	oldKeyGen := rmd.LatestKeyGeneration()
+
+	config2 := ConfigAsUser(config, "bob")
+
+	// Pretend that bob@twitter now resolves to bob.
+	daemon := config2.KeybaseService().(*KeybaseDaemonLocal)
+	daemon.addNewAssertionForTestOrBust("bob", "bob@twitter")
+
+	// Make the second key generation as bob, which should still
+	// succeed.
+	done, _, err = config2.KeyManager().Rekey(ctx, rmd, false)
+	require.NoError(t, err)
+	require.True(t, done)
+
+	// Reader promotion shouldn't increase the key generation.
+	require.Equal(t, oldKeyGen, rmd.LatestKeyGeneration())
+
+	isWriter, _, err = rmd.GetDevicePublicKeys(aliceUID)
+	require.NoError(t, err)
+	require.True(t, isWriter)
+	isWriter, _, err = rmd.GetDevicePublicKeys(bobUID)
+	require.NoError(t, err)
+	require.True(t, isWriter)
+
+	newH := rmd.GetTlfHandle()
+	require.Equal(t,
+		CanonicalTlfName("alice,bob"),
+		newH.GetCanonicalName())
 }
 
 func TestKeyManagerPromoteReaderFailure2Private(t *testing.T) {
