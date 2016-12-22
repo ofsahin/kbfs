@@ -1773,6 +1773,9 @@ type MutableBareRootMetadata interface {
 	//
 	// AddKeyGeneration must only be called on metadata for
 	// private TLFs.
+	//
+	// Note that the TLFPrivateKey corresponding to privKey must
+	// also be stored in PrivateMetadata.
 	AddKeyGeneration(codec kbfscodec.Codec, crypto cryptoPure,
 		currExtra ExtraMetadata,
 		updatedWriterKeys, updatedReaderKeys UserDevicePublicKeys,
