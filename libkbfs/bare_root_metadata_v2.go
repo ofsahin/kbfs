@@ -1141,7 +1141,7 @@ func (md *BareRootMetadataV2) GetUserDeviceKeyInfoMaps(
 	return rUDKIM, wUDKIM, nil
 }
 
-func (md *BareRootMetadataV2) updateKeyGenerationForReader(
+func (md *BareRootMetadataV2) updateKeyGenerationForReaderRekey(
 	crypto cryptoPure, keyGen KeyGen, rKeys UserDevicePublicKeys,
 	ePubKey kbfscrypto.TLFEphemeralPublicKey,
 	ePrivKey kbfscrypto.TLFEphemeralPrivateKey,
@@ -1280,10 +1280,12 @@ func (md *BareRootMetadataV2) UpdateKeyBundles(crypto cryptoPure,
 	serverHalves := make([]UserDeviceKeyServerHalves, len(tlfCryptKeys))
 	if len(wKeys) == 0 {
 		// Reader rekey case.
+
 		for keyGen := FirstValidKeyGen; keyGen <= md.LatestKeyGeneration(); keyGen++ {
-			serverHalvesGen, err := md.updateKeyGenerationForReader(
-				crypto, keyGen, rKeys, ePubKey, ePrivKey,
-				tlfCryptKeys[keyGen-FirstValidKeyGen])
+			serverHalvesGen, err :=
+				md.updateKeyGenerationForReaderRekey(crypto,
+					keyGen, rKeys, ePubKey, ePrivKey,
+					tlfCryptKeys[keyGen-FirstValidKeyGen])
 			if err != nil {
 				return nil, err
 			}
