@@ -1387,11 +1387,6 @@ func (fbo *folderBranchOps) SetInitialHeadFromServer(
 // object and sets the head to that.
 func (fbo *folderBranchOps) SetInitialHeadToNew(
 	ctx context.Context, id tlf.ID, handle *TlfHandle) (err error) {
-	fbo.log.CDebugf(ctx, "SetInitialHeadToNew")
-	defer func() {
-		fbo.deferLog.CDebugf(ctx, "Done: %v", err)
-	}()
-
 	rmd, err := makeInitialRootMetadata(
 		fbo.config.MetadataVersion(), id, handle)
 	if err != nil {
@@ -1399,6 +1394,11 @@ func (fbo *folderBranchOps) SetInitialHeadToNew(
 	}
 
 	return runUnlessCanceled(ctx, func() error {
+		fbo.log.CDebugf(ctx, "SetInitialHeadToNew")
+		defer func() {
+			fbo.deferLog.CDebugf(ctx, "Done: %v", err)
+		}()
+
 		fb := FolderBranch{rmd.TlfID(), MasterBranch}
 		if fb != fbo.folderBranch {
 			return WrongOpsError{fbo.folderBranch, fb}
