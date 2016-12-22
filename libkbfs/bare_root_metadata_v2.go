@@ -1136,7 +1136,7 @@ func (md *BareRootMetadataV2) updateKeyGeneration(
 // AddKeyGeneration implements the MutableBareRootMetadata interface
 // for BareRootMetadataV2.
 func (md *BareRootMetadataV2) AddKeyGeneration(codec kbfscodec.Codec,
-	crypto cryptoPure, _ ExtraMetadata,
+	crypto cryptoPure, extra ExtraMetadata,
 	wKeys, rKeys UserDevicePublicKeys,
 	ePubKey kbfscrypto.TLFEphemeralPublicKey,
 	ePrivKey kbfscrypto.TLFEphemeralPrivateKey,
@@ -1156,6 +1156,9 @@ func (md *BareRootMetadataV2) AddKeyGeneration(codec kbfscodec.Codec,
 	if currCryptKey != (kbfscrypto.TLFCryptKey{}) {
 		return nil, nil, errors.New("currCryptKey unexpectedly non-zero")
 	}
+
+	// TODO: If we already have existing keys, make sure wKeys and
+	// rKeys match them.
 
 	newWriterKeys := TLFWriterKeyBundleV2{
 		WKeys:        make(UserDeviceKeyInfoMapV2),
