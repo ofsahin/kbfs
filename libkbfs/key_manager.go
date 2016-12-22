@@ -191,7 +191,7 @@ func (km *KeyManagerStandard) getTLFCryptKeyParams(
 	kbpki := km.config.KBPKI()
 	crypto := km.config.Crypto()
 	localMakeRekeyReadError := func() error {
-		return makeRekeyReadError(ctx, km.config, kmd, keyGen, uid, username)
+		return makeRekeyReadError(ctx, km.config, kmd, uid, username)
 	}
 
 	if flags&getTLFCryptKeyAnyDevice != 0 {

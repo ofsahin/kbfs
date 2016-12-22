@@ -231,18 +231,11 @@ func testMakeRekeyReadError(t *testing.T, ver MetadataVer) {
 	u, uid, err := config.KBPKI().Resolve(context.Background(), "bob")
 	require.NoError(t, err)
 
-	err = makeRekeyReadErrorHelper(rmd.ReadOnly(), h, FirstValidKeyGen, uid, u)
+	err = makeRekeyReadErrorHelper(rmd.ReadOnly(), h, uid, u)
 	require.Equal(t, NewReadAccessError(h, u, "/keybase/private/alice"), err)
 
-	err = makeRekeyReadErrorHelper(rmd.ReadOnly(), h, FirstValidKeyGen, h.FirstResolvedWriter(), "alice")
+	err = makeRekeyReadErrorHelper(rmd.ReadOnly(), h, h.FirstResolvedWriter(), "alice")
 	require.Equal(t, NeedSelfRekeyError{"alice"}, err)
-
-	err = makeRekeyReadErrorHelper(rmd.ReadOnly(), h, FirstValidKeyGen+1, h.FirstResolvedWriter(), "alice")
-	if ver < SegregatedKeyBundlesVer {
-		require.Equal(t, NeedOtherRekeyError{"alice"}, err)
-	} else {
-		require.Equal(t, NeedSelfRekeyError{"alice"}, err)
-	}
 }
 
 func TestMakeRekeyReadErrorResolvedHandle(t *testing.T) {
@@ -266,7 +259,7 @@ func testMakeRekeyReadErrorResolvedHandle(t *testing.T, ver MetadataVer) {
 	u, uid, err := config.KBPKI().Resolve(ctx, "bob")
 	require.NoError(t, err)
 
-	err = makeRekeyReadErrorHelper(rmd.ReadOnly(), h, FirstValidKeyGen, uid, u)
+	err = makeRekeyReadErrorHelper(rmd.ReadOnly(), h, uid, u)
 	require.Equal(t, NewReadAccessError(h, u, "/keybase/private/alice,bob@twitter"), err)
 
 	config.KeybaseService().(*KeybaseDaemonLocal).addNewAssertionForTestOrBust(
@@ -275,7 +268,7 @@ func testMakeRekeyReadErrorResolvedHandle(t *testing.T, ver MetadataVer) {
 	resolvedHandle, err := h.ResolveAgain(ctx, config.KBPKI())
 	require.NoError(t, err)
 
-	err = makeRekeyReadErrorHelper(rmd.ReadOnly(), resolvedHandle, FirstValidKeyGen, uid, u)
+	err = makeRekeyReadErrorHelper(rmd.ReadOnly(), resolvedHandle, uid, u)
 	require.Equal(t, NeedOtherRekeyError{"alice,bob"}, err)
 }
 
