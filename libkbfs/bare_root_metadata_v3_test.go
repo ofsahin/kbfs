@@ -51,7 +51,7 @@ func TestRootMetadataV3ExtraNew(t *testing.T) {
 
 	codec := kbfscodec.NewMsgpack()
 	crypto := MakeCryptoCommon(codec)
-	extra := FakeInitialRekey(rmd, codec, bh, kbfscrypto.TLFPublicKey{})
+	extra := FakeInitialRekey(rmd, bh, kbfscrypto.TLFPublicKey{})
 	extraV3, ok := extra.(*ExtraMetadataV3)
 	require.True(t, ok)
 	require.True(t, extraV3.wkbNew)
@@ -84,7 +84,7 @@ func TestIsValidRekeyRequestBasicV3(t *testing.T) {
 
 	brmd, err := MakeInitialBareRootMetadataV3(tlfID, bh)
 	require.NoError(t, err)
-	extra := FakeInitialRekey(brmd, codec, bh, kbfscrypto.TLFPublicKey{})
+	extra := FakeInitialRekey(brmd, bh, kbfscrypto.TLFPublicKey{})
 
 	newBrmd, err := brmd.DeepCopy(codec)
 	require.NoError(t, err)
@@ -155,7 +155,7 @@ func TestRevokeRemovedDevicesV3(t *testing.T) {
 	brmd, err := MakeInitialBareRootMetadataV3(tlfID, bh)
 	require.NoError(t, err)
 
-	extra := FakeInitialRekey(brmd, codec, bh, kbfscrypto.TLFPublicKey{})
+	extra := FakeInitialRekey(brmd, bh, kbfscrypto.TLFPublicKey{})
 
 	wkb, rkb, err := brmd.getTLFKeyBundles(extra)
 	require.NoError(t, err)
