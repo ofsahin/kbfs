@@ -256,7 +256,6 @@ func TestBServerRemotePutCanceled(t *testing.T) {
 	codec := kbfscodec.NewMsgpack()
 	localUsers := MakeLocalUsers([]libkb.NormalizedUsername{"testuser"})
 	currentUID := localUsers[0].UID
-	crypto := MakeCryptoCommon(codec)
 	serverConn, conn := rpc.MakeConnectionForTest(t)
 	log := logger.NewTestLogger(t)
 	b := newBlockServerRemoteWithClient(codec, nil, log,
