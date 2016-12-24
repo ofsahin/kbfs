@@ -78,7 +78,7 @@ func TestJournalServerRestart(t *testing.T) {
 
 	// Put a block.
 
-	bCtx := BlockContext{uid, "", ZeroBlockRefNonce}
+	bCtx := BlockContext{uid, "", kbfsblock.ZeroRefNonce}
 	data := []byte{1, 2, 3, 4}
 	bID, err := crypto.MakePermanentBlockID(data)
 	require.NoError(t, err)
@@ -152,7 +152,7 @@ func TestJournalServerLogOutLogIn(t *testing.T) {
 
 	// Put a block.
 
-	bCtx := BlockContext{uid, "", ZeroBlockRefNonce}
+	bCtx := BlockContext{uid, "", kbfsblock.ZeroRefNonce}
 	data := []byte{1, 2, 3, 4}
 	bID, err := crypto.MakePermanentBlockID(data)
 	require.NoError(t, err)
@@ -261,7 +261,7 @@ func TestJournalServerMultiUser(t *testing.T) {
 
 	// Put a block under user 1.
 
-	bCtx1 := BlockContext{uid1, "", ZeroBlockRefNonce}
+	bCtx1 := BlockContext{uid1, "", kbfsblock.ZeroRefNonce}
 	data1 := []byte{1, 2, 3, 4}
 	bID1, err := crypto.MakePermanentBlockID(data1)
 	require.NoError(t, err)
@@ -307,7 +307,7 @@ func TestJournalServerMultiUser(t *testing.T) {
 
 	// Put a block under user 2.
 
-	bCtx2 := BlockContext{uid2, "", ZeroBlockRefNonce}
+	bCtx2 := BlockContext{uid2, "", kbfsblock.ZeroRefNonce}
 	data2 := []byte{1, 2, 3, 4, 5}
 	bID2, err := crypto.MakePermanentBlockID(data2)
 	require.NoError(t, err)
@@ -413,7 +413,7 @@ func TestJournalServerEnableAuto(t *testing.T) {
 	uid := h.ResolvedWriters()[0]
 
 	// Access a TLF, which should create a journal automatically.
-	bCtx := BlockContext{uid, "", ZeroBlockRefNonce}
+	bCtx := BlockContext{uid, "", kbfsblock.ZeroRefNonce}
 	data := []byte{1, 2, 3, 4}
 	bID, err := crypto.MakePermanentBlockID(data)
 	require.NoError(t, err)
