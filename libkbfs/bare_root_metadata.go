@@ -36,6 +36,15 @@ func MakeInitialBareRootMetadata(
 	return MakeInitialBareRootMetadataV3(tlfID, h)
 }
 
+func dumpConfig() *spew.ConfigState {
+	c := spew.NewDefaultConfig()
+	c.Indent = "  "
+	c.DisablePointerAddresses = true
+	c.DisableCapacities = true
+	c.SortKeys = true
+	return c
+}
+
 // DumpBareRootMetadata returns a detailed dump of the given
 // BareRootMetadata's contents.
 func DumpBareRootMetadata(
@@ -51,12 +60,6 @@ func DumpBareRootMetadata(
 		return "", err
 	}
 
-	c := spew.NewDefaultConfig()
-	c.Indent = "  "
-	c.DisablePointerAddresses = true
-	c.DisableCapacities = true
-	c.SortKeys = true
-
 	switch brmdCopy := brmdCopy.(type) {
 	case *BareRootMetadataV2:
 		brmdCopy.SerializedPrivateMetadata = nil
@@ -68,6 +71,6 @@ func DumpBareRootMetadata(
 	}
 	s := fmt.Sprintf("MD size: %d bytes\n"+
 		"MD version: %s\n\n", len(serializedBRMD), brmd.Version())
-	s += c.Sdump(brmdCopy)
+	s += dumpConfig().Sdump(brmdCopy)
 	return s, nil
 }
