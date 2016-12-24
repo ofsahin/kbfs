@@ -13,6 +13,7 @@ import (
 
 	"github.com/keybase/client/go/libkb"
 	"github.com/keybase/client/go/protocol/keybase1"
+	"github.com/keybase/kbfs/kbfsblock"
 	"github.com/keybase/kbfs/kbfscodec"
 	"github.com/keybase/kbfs/kbfscrypto"
 	"github.com/keybase/kbfs/kbfshash"
@@ -118,6 +119,11 @@ func (c CryptoCommon) MakeTLFReaderKeyBundleID(rkb TLFReaderKeyBundleV3) (
 		return TLFReaderKeyBundleID{}, err
 	}
 	return TLFReaderKeyBundleID{h}, nil
+}
+
+// MakeTemporaryBlockID implements the Crypto interface for CryptoCommon.
+func (c CryptoCommon) MakeTemporaryBlockID() (kbfsblock.ID, error) {
+	return kbfsblock.MakeTemporaryID()
 }
 
 // MakeRandomTLFKeys implements the Crypto interface for CryptoCommon.

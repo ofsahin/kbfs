@@ -1790,6 +1790,17 @@ func (_mr *_MockcryptoPureRecorder) MakeMerkleHash(arg0 interface{}) *gomock.Cal
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeMerkleHash", arg0)
 }
 
+func (_m *MockcryptoPure) MakeTemporaryBlockID() (kbfsblock.ID, error) {
+	ret := _m.ctrl.Call(_m, "MakeTemporaryBlockID")
+	ret0, _ := ret[0].(kbfsblock.ID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockcryptoPureRecorder) MakeTemporaryBlockID() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeTemporaryBlockID")
+}
+
 func (_m *MockcryptoPure) MakeRandomTLFKeys() (kbfscrypto.TLFPublicKey, kbfscrypto.TLFPrivateKey, kbfscrypto.TLFEphemeralPublicKey, kbfscrypto.TLFEphemeralPrivateKey, kbfscrypto.TLFCryptKey, error) {
 	ret := _m.ctrl.Call(_m, "MakeRandomTLFKeys")
 	ret0, _ := ret[0].(kbfscrypto.TLFPublicKey)
@@ -1814,16 +1825,6 @@ func (_m *MockcryptoPure) MakeRandomTLFCryptKeyServerHalf() (kbfscrypto.TLFCrypt
 
 func (_mr *_MockcryptoPureRecorder) MakeRandomTLFCryptKeyServerHalf() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeRandomTLFCryptKeyServerHalf")
-}
-
-func (_m *MockcryptoPure) Verify(msg []byte, sigInfo kbfscrypto.SignatureInfo) error {
-	ret := _m.ctrl.Call(_m, "Verify", msg, sigInfo)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-func (_mr *_MockcryptoPureRecorder) Verify(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Verify", arg0, arg1)
 }
 
 func (_m *MockcryptoPure) EncryptTLFCryptKeyClientHalf(privateKey kbfscrypto.TLFEphemeralPrivateKey, publicKey kbfscrypto.CryptPublicKey, clientHalf kbfscrypto.TLFCryptKeyClientHalf) (EncryptedTLFCryptKeyClientHalf, error) {
@@ -2033,6 +2034,17 @@ func (_mr *_MockCryptoRecorder) MakeMerkleHash(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeMerkleHash", arg0)
 }
 
+func (_m *MockCrypto) MakeTemporaryBlockID() (kbfsblock.ID, error) {
+	ret := _m.ctrl.Call(_m, "MakeTemporaryBlockID")
+	ret0, _ := ret[0].(kbfsblock.ID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockCryptoRecorder) MakeTemporaryBlockID() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeTemporaryBlockID")
+}
+
 func (_m *MockCrypto) MakeRandomTLFKeys() (kbfscrypto.TLFPublicKey, kbfscrypto.TLFPrivateKey, kbfscrypto.TLFEphemeralPublicKey, kbfscrypto.TLFEphemeralPrivateKey, kbfscrypto.TLFCryptKey, error) {
 	ret := _m.ctrl.Call(_m, "MakeRandomTLFKeys")
 	ret0, _ := ret[0].(kbfscrypto.TLFPublicKey)
@@ -2057,16 +2069,6 @@ func (_m *MockCrypto) MakeRandomTLFCryptKeyServerHalf() (kbfscrypto.TLFCryptKeyS
 
 func (_mr *_MockCryptoRecorder) MakeRandomTLFCryptKeyServerHalf() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeRandomTLFCryptKeyServerHalf")
-}
-
-func (_m *MockCrypto) Verify(msg []byte, sigInfo kbfscrypto.SignatureInfo) error {
-	ret := _m.ctrl.Call(_m, "Verify", msg, sigInfo)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-func (_mr *_MockCryptoRecorder) Verify(arg0, arg1 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Verify", arg0, arg1)
 }
 
 func (_m *MockCrypto) EncryptTLFCryptKeyClientHalf(privateKey kbfscrypto.TLFEphemeralPrivateKey, publicKey kbfscrypto.CryptPublicKey, clientHalf kbfscrypto.TLFCryptKeyClientHalf) (EncryptedTLFCryptKeyClientHalf, error) {
