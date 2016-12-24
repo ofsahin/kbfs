@@ -13,6 +13,7 @@ import (
 	"github.com/keybase/client/go/logger"
 	"github.com/keybase/client/go/protocol/keybase1"
 	"github.com/keybase/go-framed-msgpack-rpc/rpc"
+	"github.com/keybase/kbfs/kbfsblock"
 	"github.com/keybase/kbfs/kbfscodec"
 	"github.com/keybase/kbfs/kbfscrypto"
 	"github.com/keybase/kbfs/tlf"
@@ -77,7 +78,7 @@ func (fc *FakeBServerClient) PutBlock(ctx context.Context, arg keybase1.PutBlock
 		return err
 	}
 
-	id, err := BlockIDFromString(arg.Bid.BlockHash)
+	id, err := kbfsblock.IDFromString(arg.Bid.BlockHash)
 	if err != nil {
 		return err
 	}
@@ -106,7 +107,7 @@ func (fc *FakeBServerClient) GetBlock(ctx context.Context, arg keybase1.GetBlock
 		return keybase1.GetBlockRes{}, err
 	}
 
-	id, err := BlockIDFromString(arg.Bid.BlockHash)
+	id, err := kbfsblock.IDFromString(arg.Bid.BlockHash)
 	if err != nil {
 		return keybase1.GetBlockRes{}, err
 	}
@@ -136,7 +137,7 @@ func (fc *FakeBServerClient) GetBlock(ctx context.Context, arg keybase1.GetBlock
 }
 
 func (fc *FakeBServerClient) AddReference(ctx context.Context, arg keybase1.AddReferenceArg) error {
-	id, err := BlockIDFromString(arg.Ref.Bid.BlockHash)
+	id, err := kbfsblock.IDFromString(arg.Ref.Bid.BlockHash)
 	if err != nil {
 		return err
 	}
@@ -262,7 +263,7 @@ func TestBServerRemotePutCanceled(t *testing.T) {
 		keybase1.BlockClient{Cli: conn.GetClient()})
 
 	f := func(ctx context.Context) error {
-		bID := fakeBlockID(1)
+		bID := kbfsblock.FakeID(1)
 		tlfID := tlf.FakeID(2, false)
 		bCtx := BlockContext{currentUID, "", ZeroBlockRefNonce}
 		data := []byte{1, 2, 3, 4}

@@ -2941,7 +2941,7 @@ func (cr *ConflictResolver) calculateResolutionUsage(ctx context.Context,
 	lState *lockState, md *RootMetadata, bps *blockPutState,
 	unmergedChains, mergedChains *crChains,
 	mostRecentMergedMD ImmutableRootMetadata) (
-	blocksToDelete []BlockID, err error) {
+	blocksToDelete []kbfsblock.ID, err error) {
 	md.SetRefBytes(0)
 	md.SetUnrefBytes(0)
 	md.SetDiskUsage(mostRecentMergedMD.DiskUsage())
@@ -3224,7 +3224,7 @@ func (cr *ConflictResolver) syncBlocks(ctx context.Context, lState *lockState,
 	resolvedPaths map[BlockPointer]path, lbc localBcache,
 	newFileBlocks fileBlockMap) (
 	updates map[BlockPointer]BlockPointer, bps *blockPutState,
-	blocksToDelete []BlockID, err error) {
+	blocksToDelete []kbfsblock.ID, err error) {
 	err = cr.checkDone(ctx)
 	if err != nil {
 		return nil, nil, nil, err
@@ -3644,7 +3644,7 @@ func (cr *ConflictResolver) finalizeResolution(ctx context.Context,
 	lState *lockState, md *RootMetadata,
 	unmergedChains, mergedChains *crChains,
 	updates map[BlockPointer]BlockPointer,
-	bps *blockPutState, blocksToDelete []BlockID, writerLocked bool) error {
+	bps *blockPutState, blocksToDelete []kbfsblock.ID, writerLocked bool) error {
 	err := cr.checkDone(ctx)
 	if err != nil {
 		return err

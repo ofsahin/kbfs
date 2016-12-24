@@ -8,6 +8,7 @@ import (
 	"encoding"
 	"encoding/json"
 
+	"github.com/keybase/kbfs/kbfscrypto"
 	"github.com/keybase/kbfs/kbfshash"
 )
 
@@ -75,4 +76,58 @@ func (id ID) MarshalJSON() ([]byte, error) {
 // for ID.
 func (id *ID) UnmarshalJSON(buf []byte) error {
 	return id.h.UnmarshalJSON(buf)
+}
+
+// MakeTemporaryID generates a temporary block ID using a CSPRNG. This
+// is used for indirect blocks before they're committed to the server.
+func MakeTemporaryID() (ID, error) {
+	var dh kbfshash.RawDefaultHash
+	err := kbfscrypto.RandRead(dh[:])
+	if err != nil {
+		return ID{}, err
+	}
+	h, err := kbfshash.HashFromRaw(kbfshash.DefaultHashType, dh[:])
+	if err != nil {
+		return ID{}, err
+	}
+	return ID{h}, nil
+}
+
+// MakePermanentID computes the permanent ID of a block given its
+// encoded and encrypted contents.
+func MakePermanentID(encodedEncryptedData []byte) (ID, error) {
+	h, err := kbfshash.DefaultHash(encodedEncryptedData)
+	if err != nil {
+		return ID{}, err
+	}
+	return ID{h}, nil
+}
+
+// VerifyID verifies that the given block ID is the permanent block ID
+// for the given encoded and encrypted data.
+func VerifyID(encodedEncryptedData []byte, id ID) error {
+	return id.h.Verify(encodedEncryptedData)
+}
+
+// FakeID returns an ID derived from the given byte, suitable for
+// testing.
+func FakeID(b byte) ID {
+	dh := kbfshash.RawDefaultHash{b}
+	h, err := kbfshash.HashFromRaw(kbfshash.DefaultHashType, dh[:])
+	if err != nil {
+		panic(err)
+	}
+	return ID{h}
+}
+
+// FakeIDAdd returns an ID derived from first byte of given ID plus the
+// given byte, suitable for testing.
+func FakeIDAdd(id ID, b byte) ID {
+	return FakeID(id.h.Bytes()[1] + b)
+}
+
+// FakeIDMul returns an ID derived from first byte of given ID times the
+// given byte, suitable for testing.
+func FakeIDMul(id ID, b byte) ID {
+	return FakeID(id.h.Bytes()[1] * b)
 }
