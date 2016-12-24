@@ -1752,7 +1752,7 @@ func (fbo *folderBranchOps) unembedBlockChanges(
 		ID:      bid,
 		KeyGen:  md.LatestKeyGeneration(),
 		DataVer: fbo.config.DataVersion(),
-		BlockContext: BlockContext{
+		Context: kbfsblock.Context{
 			Creator:  uid,
 			RefNonce: kbfsblock.ZeroRefNonce,
 		},
