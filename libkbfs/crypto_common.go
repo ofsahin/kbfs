@@ -126,6 +126,11 @@ func (c CryptoCommon) MakeTemporaryBlockID() (kbfsblock.ID, error) {
 	return kbfsblock.MakeTemporaryID()
 }
 
+// MakeBlockRefNonce implements the Crypto interface for CryptoCommon.
+func (c CryptoCommon) MakeBlockRefNonce() (kbfsblock.RefNonce, error) {
+	return kbfsblock.MakeRefNonce()
+}
+
 // MakeRandomTLFKeys implements the Crypto interface for CryptoCommon.
 func (c CryptoCommon) MakeRandomTLFKeys() (
 	tlfPublicKey kbfscrypto.TLFPublicKey,

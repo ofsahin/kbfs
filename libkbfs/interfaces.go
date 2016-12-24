@@ -773,6 +773,11 @@ type cryptoPure interface {
 	// committed to the server.
 	MakeTemporaryBlockID() (kbfsblock.ID, error)
 
+	// MakeRefNonce generates a block reference nonce using a
+	// CSPRNG. This is used for distinguishing different references to
+	// the same BlockID.
+	MakeBlockRefNonce() (kbfsblock.RefNonce, error)
+
 	// MakeRandomTLFKeys generates top-level folder keys using a CSPRNG.
 	MakeRandomTLFKeys() (kbfscrypto.TLFPublicKey,
 		kbfscrypto.TLFPrivateKey, kbfscrypto.TLFEphemeralPublicKey,

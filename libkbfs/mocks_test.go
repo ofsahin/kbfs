@@ -1801,6 +1801,17 @@ func (_mr *_MockcryptoPureRecorder) MakeTemporaryBlockID() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeTemporaryBlockID")
 }
 
+func (_m *MockcryptoPure) MakeBlockRefNonce() (kbfsblock.RefNonce, error) {
+	ret := _m.ctrl.Call(_m, "MakeBlockRefNonce")
+	ret0, _ := ret[0].(kbfsblock.RefNonce)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockcryptoPureRecorder) MakeBlockRefNonce() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeBlockRefNonce")
+}
+
 func (_m *MockcryptoPure) MakeRandomTLFKeys() (kbfscrypto.TLFPublicKey, kbfscrypto.TLFPrivateKey, kbfscrypto.TLFEphemeralPublicKey, kbfscrypto.TLFEphemeralPrivateKey, kbfscrypto.TLFCryptKey, error) {
 	ret := _m.ctrl.Call(_m, "MakeRandomTLFKeys")
 	ret0, _ := ret[0].(kbfscrypto.TLFPublicKey)
@@ -2043,6 +2054,17 @@ func (_m *MockCrypto) MakeTemporaryBlockID() (kbfsblock.ID, error) {
 
 func (_mr *_MockCryptoRecorder) MakeTemporaryBlockID() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeTemporaryBlockID")
+}
+
+func (_m *MockCrypto) MakeBlockRefNonce() (kbfsblock.RefNonce, error) {
+	ret := _m.ctrl.Call(_m, "MakeBlockRefNonce")
+	ret0, _ := ret[0].(kbfsblock.RefNonce)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockCryptoRecorder) MakeBlockRefNonce() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "MakeBlockRefNonce")
 }
 
 func (_m *MockCrypto) MakeRandomTLFKeys() (kbfscrypto.TLFPublicKey, kbfscrypto.TLFPrivateKey, kbfscrypto.TLFEphemeralPublicKey, kbfscrypto.TLFEphemeralPrivateKey, kbfscrypto.TLFCryptKey, error) {
