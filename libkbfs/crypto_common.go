@@ -131,6 +131,13 @@ func (c CryptoCommon) MakeBlockRefNonce() (kbfsblock.RefNonce, error) {
 	return kbfsblock.MakeRefNonce()
 }
 
+// MakeRandomBlockCryptKeyServerHalf implements the Crypto interface
+// for CryptoCommon.
+func (c CryptoCommon) MakeRandomBlockCryptKeyServerHalf() (
+	kbfscrypto.BlockCryptKeyServerHalf, error) {
+	return kbfscrypto.MakeRandomBlockCryptKeyServerHalf()
+}
+
 // MakeRandomTLFKeys implements the Crypto interface for CryptoCommon.
 func (c CryptoCommon) MakeRandomTLFKeys() (
 	tlfPublicKey kbfscrypto.TLFPublicKey,
