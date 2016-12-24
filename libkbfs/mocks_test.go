@@ -3208,7 +3208,7 @@ func (_mr *_MockBlockServerRecorder) AddBlockReference(arg0, arg1, arg2, arg3 in
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddBlockReference", arg0, arg1, arg2, arg3)
 }
 
-func (_m *MockBlockServer) RemoveBlockReferences(ctx context.Context, tlfID tlf.ID, contexts map[kbfsblock.ID][]kbfsblock.Context) (map[kbfsblock.ID]int, error) {
+func (_m *MockBlockServer) RemoveBlockReferences(ctx context.Context, tlfID tlf.ID, contexts kbfsblock.ContextMap) (map[kbfsblock.ID]int, error) {
 	ret := _m.ctrl.Call(_m, "RemoveBlockReferences", ctx, tlfID, contexts)
 	ret0, _ := ret[0].(map[kbfsblock.ID]int)
 	ret1, _ := ret[1].(error)
@@ -3219,7 +3219,7 @@ func (_mr *_MockBlockServerRecorder) RemoveBlockReferences(arg0, arg1, arg2 inte
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "RemoveBlockReferences", arg0, arg1, arg2)
 }
 
-func (_m *MockBlockServer) ArchiveBlockReferences(ctx context.Context, tlfID tlf.ID, contexts map[kbfsblock.ID][]kbfsblock.Context) error {
+func (_m *MockBlockServer) ArchiveBlockReferences(ctx context.Context, tlfID tlf.ID, contexts kbfsblock.ContextMap) error {
 	ret := _m.ctrl.Call(_m, "ArchiveBlockReferences", ctx, tlfID, contexts)
 	ret0, _ := ret[0].(error)
 	return ret0
@@ -3320,7 +3320,7 @@ func (_mr *_MockblockServerLocalRecorder) AddBlockReference(arg0, arg1, arg2, ar
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "AddBlockReference", arg0, arg1, arg2, arg3)
 }
 
-func (_m *MockblockServerLocal) RemoveBlockReferences(ctx context.Context, tlfID tlf.ID, contexts map[kbfsblock.ID][]kbfsblock.Context) (map[kbfsblock.ID]int, error) {
+func (_m *MockblockServerLocal) RemoveBlockReferences(ctx context.Context, tlfID tlf.ID, contexts kbfsblock.ContextMap) (map[kbfsblock.ID]int, error) {
 	ret := _m.ctrl.Call(_m, "RemoveBlockReferences", ctx, tlfID, contexts)
 	ret0, _ := ret[0].(map[kbfsblock.ID]int)
 	ret1, _ := ret[1].(error)
@@ -3331,7 +3331,7 @@ func (_mr *_MockblockServerLocalRecorder) RemoveBlockReferences(arg0, arg1, arg2
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "RemoveBlockReferences", arg0, arg1, arg2)
 }
 
-func (_m *MockblockServerLocal) ArchiveBlockReferences(ctx context.Context, tlfID tlf.ID, contexts map[kbfsblock.ID][]kbfsblock.Context) error {
+func (_m *MockblockServerLocal) ArchiveBlockReferences(ctx context.Context, tlfID tlf.ID, contexts kbfsblock.ContextMap) error {
 	ret := _m.ctrl.Call(_m, "ArchiveBlockReferences", ctx, tlfID, contexts)
 	ret0, _ := ret[0].(error)
 	return ret0
